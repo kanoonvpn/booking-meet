@@ -643,8 +643,8 @@
 const SETTINGS_PASSWORD = "devteam2026";
 
 // ใส่ URL ของ n8n Webhook สำหรับแจ้งเตือน Discord เมื่อมีการจองใหม่ (ดูวิธีตั้งค่าด้านล่างของแชท)
-const N8N_NEW_BOOKING_WEBHOOK = "https://n8n-external.exservice.io/webhook/new-booking"; // เช่น "https://your-n8n.app/webhook/new-booking"
-const N8N_CANCEL_BOOKING_WEBHOOK = "https://n8n-external.exservice.io/webhook/cancel-booking"; // เช่น "https://your-n8n.app/webhook/cancel-booking"
+const N8N_NEW_BOOKING_WEBHOOK = "https://n8n-external.exservice.io/webhook-test/new-booking"; // เช่น "https://your-n8n.app/webhook/new-booking"
+const N8N_CANCEL_BOOKING_WEBHOOK = "https://n8n-external.exservice.io/webhook-test/cancel-booking"; // เช่น "https://your-n8n.app/webhook/cancel-booking"
 
 // รายชื่อคนที่เปิดให้จอง แต่ละคนมีตารางเวลา (การจอง/ปิดรับจอง) แยกจากกันอิสระ
 // เพิ่ม/ลบคนได้ตรงนี้ — id ห้ามซ้ำ ห้ามมีช่องว่าง ใช้เป็น key เก็บข้อมูล
@@ -865,15 +865,22 @@ async function confirmBooking(){
 
   // fire-and-forget notify n8n -> discord (wrapped so a bad URL/network error never blocks the booking flow)
   if(N8N_NEW_BOOKING_WEBHOOK){
+    console.log('[n8n] sending new-booking webhook to:', N8N_NEW_BOOKING_WEBHOOK, booking);
     try{
       fetch(N8N_NEW_BOOKING_WEBHOOK, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify(booking)
-      }).catch(()=>{});
+      }).then(res=>{
+        console.log('[n8n] new-booking webhook response:', res.status, res.statusText);
+      }).catch(err=>{
+        console.error('[n8n] new-booking webhook request failed:', err);
+      });
     }catch(e){
-      console.warn('n8n webhook (new booking) failed to send:', e);
+      console.error('[n8n] new-booking webhook threw synchronously (likely malformed URL):', e);
     }
+  }else{
+    console.log('[n8n] N8N_NEW_BOOKING_WEBHOOK is empty — skipping notification');
   }
 
   showToast('จองสำเร็จกับ ' + personName(person) + ': ' + date + ' เวลา ' + slotLabel(time));
@@ -930,15 +937,22 @@ async function confirmCancel(){
 
   // fire-and-forget notify n8n -> discord (wrapped so a bad URL/network error never blocks the cancel flow)
   if(N8N_CANCEL_BOOKING_WEBHOOK){
+    console.log('[n8n] sending cancel-booking webhook to:', N8N_CANCEL_BOOKING_WEBHOOK, b);
     try{
       fetch(N8N_CANCEL_BOOKING_WEBHOOK, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify(b)
-      }).catch(()=>{});
+      }).then(res=>{
+        console.log('[n8n] cancel-booking webhook response:', res.status, res.statusText);
+      }).catch(err=>{
+        console.error('[n8n] cancel-booking webhook request failed:', err);
+      });
     }catch(e){
-      console.warn('n8n webhook (cancel booking) failed to send:', e);
+      console.error('[n8n] cancel-booking webhook threw synchronously (likely malformed URL):', e);
     }
+  }else{
+    console.log('[n8n] N8N_CANCEL_BOOKING_WEBHOOK is empty — skipping notification');
   }
 
   showToast('ยกเลิกการจองแล้ว: ' + b.date + ' เวลา ' + slotLabel(b.time));
