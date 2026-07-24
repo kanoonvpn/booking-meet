@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dev Sync — จองคิวปรึกษาทีม Dev</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0B0F14;
+    --panel:#111823;
+    --paper:#F5F6F8;
+    --line:#DDE1E6;
+    --teal:#00C2A8;
+    --teal-dim:#0A3D36;
+    --coral:#FF6B4A;
+    --amber:#E8A93B;
+    --text:#1A1F26;
+    --text-dim:#5C6570;
+    --white:#FFFFFF;
+    --mono:'IBM Plex Mono', monospace;
+    --sans:'IBM Plex Sans Thai','IBM Plex Mono',sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:var(--sans);
+    background:var(--paper);
+    color:var(--text);
+    min-height:100vh;
+  }
+  header{
+    background:var(--ink);
+    color:var(--white);
+    padding:18px 28px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+    border-bottom:3px solid var(--teal);
+  }
+  .brand{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+  }
+  .brand .glyph{
+    font-family:var(--mono);
+    color:var(--teal);
+    font-weight:700;
+    font-size:20px;
+  }
+  .brand h1{
+    font-size:17px;
+    font-weight:600;
+    letter-spacing:0.2px;
+  }
+  .brand .tag{
+    font-family:var(--mono);
+    font-size:11px;
+    color:#8A93A0;
+  }
+  nav{
+    display:flex;
+    gap:8px;
+    background:#1a212c;
+    padding:4px;
+    border-radius:8px;
+  }
+  nav button{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:0.3px;
+    background:transparent;
+    border:none;
+    color:#9AA4B2;
+    padding:8px 14px;
+    border-radius:6px;
+    cursor:pointer;
+    transition:.15s;
+  }
+  nav button.active{
+    background:var(--teal);
+    color:var(--ink);
+    font-weight:600;
+  }
+  nav button:not(.active):hover{ color:var(--white); }
+
+  main{ padding:24px 28px 60px; max-width:1180px; margin:0 auto; }
+  .view{ display:none; animation:fade .25s ease; }
+  .view.active{ display:block; }
+  @keyframes fade{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+
+  .grid-2col{
+    display:grid;
+    grid-template-columns:340px 1fr;
+    gap:22px;
+    align-items:start;
+  }
+  @media (max-width:880px){ .grid-2col{ grid-template-columns:1fr; } }
+
+  .card{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:20px;
+  }
+  .card h2{
+    font-size:14px;
+    font-family:var(--mono);
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+    color:var(--text-dim);
+    margin-bottom:16px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .card h2::before{
+    content:'';
+    width:8px; height:8px;
+    background:var(--teal);
+    border-radius:2px;
+    display:inline-block;
+  }
+
+  label{
+    display:block;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--text-dim);
+    margin:14px 0 6px;
+  }
+  label:first-of-type{ margin-top:0; }
+  input[type=text], input[type=date], select, textarea{
+    width:100%;
+    padding:10px 12px;
+    border:1.5px solid var(--line);
+    border-radius:7px;
+    font-family:var(--sans);
+    font-size:14px;
+    background:var(--paper);
+    color:var(--text);
+  }
+  input:focus, select:focus, textarea:focus{
+    outline:none;
+    border-color:var(--teal);
+    background:var(--white);
+  }
+  textarea{ resize:vertical; min-height:60px; }
+
+  .slot-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:6px;
+    margin-top:4px;
+  }
+  .slot-btn{
+    font-family:var(--mono);
+    font-size:11.5px;
+    padding:9px 4px;
+    border:1.5px solid var(--line);
+    background:var(--white);
+    border-radius:6px;
+    cursor:pointer;
+    text-align:center;
+    color:var(--text);
+    transition:.12s;
+  }
+  .slot-btn:hover:not(:disabled){ border-color:var(--teal); }
+  .slot-btn.selected{ background:var(--teal); border-color:var(--teal); color:var(--ink); font-weight:700; }
+  .slot-btn:disabled{ background:#F0F1F3; color:#B7BEC7; text-decoration:line-through; cursor:not-allowed; }
+
+  .submit-btn{
+    width:100%;
+    margin-top:18px;
+    padding:12px;
+    background:var(--ink);
+    color:var(--white);
+    border:none;
+    border-radius:7px;
+    font-family:var(--mono);
+    font-weight:600;
+    font-size:13px;
+    letter-spacing:0.3px;
+    cursor:pointer;
+    transition:.15s;
+  }
+  .submit-btn:hover{ background:#000; }
+  .submit-btn:disabled{ background:#B7BEC7; cursor:not-allowed; }
+
+  .month-nav{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .today-btn{
+    font-family:var(--mono);
+    font-size:12px;
+    background:var(--white);
+    border:1.5px solid var(--line);
+    padding:7px 14px;
+    border-radius:6px;
+    cursor:pointer;
+  }
+  .today-btn:hover{ border-color:var(--teal); }
+  .month-title{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-family:var(--mono);
+    font-size:15px;
+    font-weight:700;
+    color:var(--text);
+  }
+  .month-title .arrow{
+    background:var(--white);
+    border:1.5px solid var(--line);
+    width:28px; height:28px;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:16px;
+    line-height:1;
+    color:var(--text-dim);
+  }
+  .month-title .arrow:hover{ border-color:var(--teal); color:var(--text); }
+
+  .month-grid{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    border:1px solid var(--line);
+    border-radius:8px;
+    overflow:hidden;
+  }
+  .month-daylabel{
+    background:var(--ink);
+    color:#9AA4B2;
+    font-family:var(--mono);
+    font-size:11px;
+    padding:8px 4px;
+    text-align:center;
+    border-left:1px solid #222b38;
+  }
+  .month-daylabel:first-child{ border-left:none; }
+  .month-cell{
+    min-height:98px;
+    border-top:1px solid var(--line);
+    border-left:1px solid var(--line);
+    padding:6px 6px 8px;
+    background:var(--white);
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+  }
+  .month-grid > .month-cell:nth-child(7n+1){ border-left:none; }
+  .month-cell.other-month{ background:#FAFBFC; }
+  .month-cell.other-month .date-num{ color:#C3C9D1; }
+  .month-cell.today{ background:#EFFBF9; }
+  .date-num{
+    font-family:var(--mono);
+    font-size:12px;
+    font-weight:600;
+    color:var(--text-dim);
+    margin-bottom:2px;
+  }
+  .today-badge{
+    background:var(--teal);
+    color:var(--ink);
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:20px; height:20px;
+    border-radius:50%;
+    font-weight:700;
+  }
+  .chips{
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+    max-height:120px;
+    overflow-y:auto;
+  }
+  .day-chip{
+    font-family:var(--mono);
+    font-size:10.5px;
+    background:var(--teal-dim);
+    color:#7FEFDD;
+    border-left:3px solid var(--teal);
+    padding:3px 6px;
+    border-radius:3px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .day-chip.closed-chip{
+    background:#4A241A;
+    color:#FFC4B0;
+    border-left-color:var(--coral);
+  }
+  .day-chip:not(.closed-chip):not(.cancelled-chip){
+    cursor:pointer;
+    transition:background .12s;
+  }
+  .day-chip:not(.closed-chip):not(.cancelled-chip):hover{
+    background:#0f5147;
+  }
+  .day-chip.cancelled-chip{
+    background:#EDEFF2;
+    color:#9AA1AB;
+    border-left-color:#C3C9D1;
+    text-decoration:line-through;
+    cursor:default;
+  }
+
+  .month-cell.settings-clickable{ cursor:pointer; transition:background .12s; }
+  .month-cell.settings-clickable:hover{ background:#F0F6F5; }
+  .month-cell.settings-disabled{ cursor:default; }
+  .day-status-badges{ display:flex; gap:4px; flex-wrap:wrap; margin-top:2px; }
+  .badge-closed-day{
+    font-family:var(--mono); font-size:9.5px; background:var(--coral); color:white;
+    padding:2px 5px; border-radius:3px; font-weight:700;
+  }
+  .badge-partial{
+    font-family:var(--mono); font-size:9.5px; background:var(--amber); color:white;
+    padding:2px 5px; border-radius:3px; font-weight:700;
+  }
+
+  .toast{
+    position:fixed;
+    bottom:24px; left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--ink);
+    color:var(--white);
+    padding:12px 20px;
+    border-radius:8px;
+    font-size:13.5px;
+    border-left:4px solid var(--teal);
+    opacity:0;
+    transition:.25s;
+    pointer-events:none;
+    z-index:50;
+    font-family:var(--sans);
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast.err{ border-left-color:var(--coral); }
+
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(11,15,20,0.55);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .18s;
+    z-index:100;
+    padding:16px;
+  }
+  .modal-overlay.show{ opacity:1; pointer-events:auto; }
+  .modal-card{
+    background:var(--white);
+    border-radius:12px;
+    padding:24px;
+    width:100%;
+    max-width:380px;
+    transform:translateY(8px);
+    transition:transform .18s;
+    box-shadow:0 20px 50px rgba(0,0,0,0.25);
+  }
+  .modal-overlay.show .modal-card{ transform:translateY(0); }
+  .modal-card h3{
+    font-family:var(--mono);
+    font-size:15px;
+    margin-bottom:16px;
+    color:var(--text);
+  }
+  .confirm-row{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    padding:9px 0;
+    border-bottom:1px solid var(--line);
+    font-size:13.5px;
+  }
+  .confirm-row:last-child{ border-bottom:none; }
+  .confirm-row span{ color:var(--text-dim); }
+  .confirm-row b{ text-align:right; font-weight:600; color:var(--text); }
+  .modal-actions{
+    display:flex;
+    gap:10px;
+    margin-top:20px;
+  }
+  .modal-btn{
+    flex:1;
+    padding:11px;
+    border-radius:7px;
+    font-family:var(--mono);
+    font-size:12.5px;
+    font-weight:600;
+    cursor:pointer;
+    border:1.5px solid var(--line);
+  }
+  .modal-btn.ghost{ background:var(--white); color:var(--text-dim); }
+  .modal-btn.ghost:hover{ border-color:#B7BEC7; }
+  .modal-btn.primary{ background:var(--ink); color:var(--white); border-color:var(--ink); }
+  .modal-btn.primary:hover{ background:#000; }
+  .modal-btn.danger{ background:var(--coral); color:var(--white); border-color:var(--coral); }
+  .modal-btn.danger:hover{ background:#E85535; }
+
+  .day-toggle-row{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:14px;
+    padding:12px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .day-toggle-row .dtr-label{
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--text);
+  }
+  #slotToggleList{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin-top:10px;
+    max-height:260px;
+    overflow-y:auto;
+  }
+  .slot-toggle-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    background:var(--paper);
+  }
+  .slot-toggle-row.slot-disabled{ opacity:0.45; pointer-events:none; }
+  .slot-toggle-row .str-label{
+    font-family:var(--mono);
+    font-size:13px;
+    color:var(--text);
+  }
+  .slot-toggle-row .str-label .booked-tag{
+    font-family:var(--sans);
+    font-size:10.5px;
+    color:var(--text-dim);
+    margin-left:6px;
+  }
+  .switch.small{ width:36px; height:21px; }
+  .switch.small .knob{ width:15px; height:15px; }
+  .switch.small.on .knob{ left:18px; }
+
+  /* settings */
+  .lock-screen{
+    max-width:360px;
+    margin:60px auto;
+    text-align:center;
+  }
+  .lock-screen .glyph{ font-family:var(--mono); font-size:32px; color:var(--teal); margin-bottom:10px;}
+  .lock-screen input{ text-align:center; letter-spacing:2px; margin-top:14px; }
+  .lock-screen button{ margin-top:12px; }
+  .err-text{ color:var(--coral); font-size:12.5px; margin-top:8px; font-family:var(--mono); display:none; }
+
+  .day-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px 14px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    margin-bottom:8px;
+    background:var(--white);
+  }
+  .day-row .dinfo{ font-family:var(--mono); font-size:13px; }
+  .day-row .dinfo .wk{ color:var(--text-dim); font-size:11px; margin-left:6px;}
+  .toggle{
+    display:flex; align-items:center; gap:10px;
+  }
+  .switch{
+    width:42px; height:24px; background:#D4D8DD; border-radius:20px; position:relative; cursor:pointer; transition:.2s;
+  }
+  .switch.on{ background:var(--teal); }
+  .switch .knob{
+    width:18px; height:18px; background:#fff; border-radius:50%;
+    position:absolute; top:3px; left:3px; transition:.2s;
+    box-shadow:0 1px 3px rgba(0,0,0,.3);
+  }
+  .switch.on .knob{ left:21px; }
+  .reason-input{
+    width:160px; font-size:12px; padding:6px 8px;
+  }
+  .settings-topbar{
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;
+  }
+  .logout-btn{
+    font-family:var(--mono); font-size:11px; background:none; border:1px solid var(--line);
+    padding:6px 10px; border-radius:6px; cursor:pointer; color:var(--text-dim);
+  }
+  .config-note{
+    font-family:var(--mono); font-size:11px; color:var(--text-dim);
+    background:#FAFBFC; border:1px dashed var(--line); border-radius:7px; padding:10px 12px; margin-top:16px;
+  }
+  .booked-by-tag{ font-size:11px; color:var(--text-dim); margin-top:2px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="glyph">&gt;_</span>
+    <div>
+      <h1>Dev Sync</h1>
+      <div class="tag">จองคิวปรึกษาทีม Dev</div>
+    </div>
+  </div>
+  <nav>
+    <button id="navBook" class="active" onclick="switchView('book')">จองคิว</button>
+    <button id="navSettings" onclick="switchView('settings')">Settings</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ================= BOOKING VIEW ================= -->
+  <section id="viewBook" class="view active">
+    <div class="grid-2col">
+      <div class="card">
+        <h2>ฟอร์มจองคิว</h2>
+        <label>เลือกผู้ที่ต้องการนัด</label>
+        <select id="fPerson" onchange="onPersonChange()"></select>
+
+        <label>ชื่อผู้จอง</label>
+        <input type="text" id="fName" placeholder="เช่น ทีม Marketing - แนน">
+
+        <label>ทีม/แผนก</label>
+        <input type="text" id="fTeam" placeholder="เช่น Marketing, Product, QA">
+
+        <label>หัวข้อการพูดคุย</label>
+        <textarea id="fTopic" placeholder="อธิบายสั้นๆ ว่าจะคุยเรื่องอะไร"></textarea>
+
+        <label>วันที่ต้องการนัด</label>
+        <input type="date" id="fDate">
+
+        <label>เลือกเวลา (1 ชม./ช่อง)</label>
+        <div class="slot-grid" id="slotGrid"></div>
+
+        <button class="submit-btn" id="submitBtn" onclick="submitBooking()">ยืนยันการจอง</button>
+      </div>
+
+      <div class="card">
+        <h2>ตารางคิวรายเดือน — <span id="calPersonLabel"></span></h2>
+        <div id="calWrap"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SETTINGS VIEW ================= -->
+  <section id="viewSettings" class="view">
+
+    <div id="lockScreen" class="lock-screen">
+      <div class="glyph">&#128274;</div>
+      <div style="font-family:var(--mono); font-size:13px; color:var(--text-dim);">พื้นที่นี้สำหรับทีม Dev เท่านั้น</div>
+      <input type="text" id="pwInput" placeholder="รหัสผ่าน" onkeydown="if(event.key==='Enter')tryUnlock()">
+      <button class="submit-btn" onclick="tryUnlock()" style="max-width:280px;">เข้าสู่ระบบ</button>
+      <div class="err-text" id="pwErr">รหัสผ่านไม่ถูกต้อง</div>
+    </div>
+
+    <div id="settingsPanel" style="display:none;">
+      <div class="settings-topbar">
+        <h2 style="font-family:var(--mono); font-size:14px; color:var(--text-dim); text-transform:uppercase;">เปิด/ปิดรับจอง</h2>
+        <button class="logout-btn" onclick="lockSettings()">ออกจากระบบ</button>
+      </div>
+      <label>เลือกตารางเวลาของ</label>
+      <select id="settingsPersonSelect" onchange="onSettingsPersonChange()" style="max-width:280px; margin-bottom:16px;"></select>
+      <div id="settingsCalWrap"></div>
+      <div class="config-note">
+        คลิกวันที่ (วันจันทร์–ศุกร์) เพื่อตั้งค่า — ปิดทั้งวัน = จองไม่ได้เลยทั้งวัน (ลายทแยงสีส้มในหน้าจองคิว) หรือปิดเฉพาะบางช่วงเวลา = ปิดเฉพาะช่วงที่เลือก ช่วงอื่นยังจองได้ตามปกติ ตารางเวลาของแต่ละคนแยกจากกันอิสระ
+      </div>
+    </div>
+
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="confirmOverlay" onclick="if(event.target===this) closeConfirmModal()">
+  <div class="modal-card">
+    <h3>ยืนยันการจองคิว</h3>
+    <div id="confirmSummary"></div>
+    <div class="modal-actions">
+      <button class="modal-btn ghost" onclick="closeConfirmModal()">แก้ไข</button>
+      <button class="modal-btn primary" onclick="confirmBooking()">ยืนยันการจอง</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="cancelOverlay" onclick="if(event.target===this) closeCancelModal()">
+  <div class="modal-card">
+    <h3>ยกเลิกการจอง</h3>
+    <div id="cancelSummary"></div>
+    <label>เหตุผลที่ยกเลิก</label>
+    <textarea id="cancelReasonInput" placeholder="เช่น ทีมงานติดประชุมด่วน / เลื่อนนัด"></textarea>
+    <div class="modal-actions">
+      <button class="modal-btn ghost" onclick="closeCancelModal()">ปิด</button>
+      <button class="modal-btn danger" onclick="confirmCancel()">ยืนยันยกเลิก</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="daySettingsOverlay" onclick="if(event.target===this) closeDaySettingsModal()">
+  <div class="modal-card">
+    <h3 id="daySettingsTitle">ตั้งค่าวันที่</h3>
+
+    <div class="day-toggle-row">
+      <div>
+        <div class="dtr-label">ปิดรับจองทั้งวัน</div>
+        <input type="text" id="wholeDayReasonInput" class="reason-input" placeholder="เหตุผล (ถ้ามี)" style="width:100%; margin-top:6px;" onchange="updateWholeDayReasonInModal()">
+      </div>
+      <div class="switch" id="wholeDaySwitch" onclick="toggleWholeDayInModal()"><div class="knob"></div></div>
+    </div>
+
+    <div id="slotToggleSection">
+      <label style="margin-top:18px;">ปิดเฉพาะบางช่วงเวลา</label>
+      <div id="slotToggleList"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn ghost" onclick="closeDaySettingsModal()">เสร็จสิ้น</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ======================= CONFIG ======================= */
+// เปลี่ยนรหัสผ่านหน้า Settings ตรงนี้
+const SETTINGS_PASSWORD = "devteam2026";
+
+// ใส่ URL ของ n8n Webhook สำหรับแจ้งเตือน Discord เมื่อมีการจองใหม่ (ดูวิธีตั้งค่าด้านล่างของแชท)
+const N8N_NEW_BOOKING_WEBHOOK = ""; // เช่น "https://your-n8n.app/webhook/new-booking"
+const N8N_CANCEL_BOOKING_WEBHOOK = ""; // เช่น "https://your-n8n.app/webhook/cancel-booking"
+
+// รายชื่อคนที่เปิดให้จอง แต่ละคนมีตารางเวลา (การจอง/ปิดรับจอง) แยกจากกันอิสระ
+// เพิ่ม/ลบคนได้ตรงนี้ — id ห้ามซ้ำ ห้ามมีช่องว่าง ใช้เป็น key เก็บข้อมูล
+const PEOPLE = [
+  { id: "tle", name: "Tle" },
+  { id: "kanoon", name: "Kanoon" }
+];
+
+// ตารางเวลาที่เปิดจองแยกตามวันในสัปดาห์ (1 ชม./ช่อง, เว้นพักเที่ยง 12:00-13:00 เสมอ)
+// ค่าคือ "เวลาเริ่ม" ของแต่ละช่อง (จบอัตโนมัติ +1 ชม.)
+const DAY_SLOTS = {
+  1: ["14:00","15:00","16:00"],              // จันทร์ 14:00-17:00
+  2: ["13:00","14:00","15:00","16:00"],       // อังคาร 11:30-17:00 (ชม.เต็มแรกเริ่ม 13:00 หลังพักเที่ยง)
+  3: ["11:00","13:00","14:00","15:00","16:00"], // พุธ 11:00-17:00
+  4: ["13:00","14:00","15:00","16:00"],       // พฤหัสฯ 11:30-17:00
+  5: ["11:00","13:00","14:00"]                // ศุกร์ 11:00-12:00, 13:00-15:00
+};
+// แถวเวลาทั้งหมดที่ใช้แสดงในตารางปฏิทิน (ยูเนียนของทุกวัน)
+function slotEnd(start){
+  const [h,m] = start.split(':').map(Number);
+  return pad(h+1) + ':' + pad(m);
+}
+function slotLabel(start){ return start + '–' + slotEnd(start); }
+function allowedSlotsFor(dateStr){
+  if(!dateStr) return [];
+  const dow = new Date(dateStr + 'T00:00:00').getDay(); // 0 sun..6 sat
+  return DAY_SLOTS[dow] || []; // weekends -> no slots
+}
+
+let bookings = [];       // [{id,person,name,team,topic,date,time,createdAt}]
+let closedDays = {};     // { personId: { "YYYY-MM-DD": "เหตุผล" } } -- ปิดทั้งวัน
+let closedSlots = {};    // { personId: { "YYYY-MM-DD": { "14:00": true, ... } } } -- ปิดเฉพาะบางช่วงเวลา
+let selectedSlot = null;
+let pendingBooking = null;
+let pendingCancelId = null;
+let currentSettingsDate = null;
+let selectedPerson = PEOPLE[0].id;   // คนที่กำลังเลือกในหน้าจอง
+let settingsPerson = PEOPLE[0].id;   // คนที่กำลังตั้งค่าในหน้า Settings
+
+function personName(id){
+  const p = PEOPLE.find(p=>p.id===id);
+  return p ? p.name : id;
+}
+function personClosedDays(id){
+  if(!closedDays[id]) closedDays[id] = {};
+  return closedDays[id];
+}
+function personClosedSlots(id){
+  if(!closedSlots[id]) closedSlots[id] = {};
+  return closedSlots[id];
+}
+
+/* ======================= STORAGE HELPERS ======================= */
+async function loadData(){
+  try{
+    const b = await window.storage.get('bookings', true);
+    bookings = b ? JSON.parse(b.value) : [];
+  }catch(e){ bookings = []; }
+  try{
+    const c = await window.storage.get('closed-days', true);
+    closedDays = c ? JSON.parse(c.value) : {};
+  }catch(e){ closedDays = {}; }
+  try{
+    const s = await window.storage.get('closed-slots', true);
+    closedSlots = s ? JSON.parse(s.value) : {};
+  }catch(e){ closedSlots = {}; }
+}
+async function saveBookings(){
+  await window.storage.set('bookings', JSON.stringify(bookings), true);
+}
+async function saveClosedDays(){
+  await window.storage.set('closed-days', JSON.stringify(closedDays), true);
+}
+async function saveClosedSlots(){
+  await window.storage.set('closed-slots', JSON.stringify(closedSlots), true);
+}
+
+/* ======================= UTIL ======================= */
+function pad(n){ return n<10 ? '0'+n : ''+n; }
+function toISO(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function showToast(msg, isErr){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isErr? ' err':'');
+  setTimeout(()=>{ t.className='toast'; }, 2600);
+}
+
+/* ======================= VIEW SWITCH ======================= */
+function switchView(v){
+  document.getElementById('viewBook').classList.toggle('active', v==='book');
+  document.getElementById('viewSettings').classList.toggle('active', v==='settings');
+  document.getElementById('navBook').classList.toggle('active', v==='book');
+  document.getElementById('navSettings').classList.toggle('active', v==='settings');
+  if(v==='settings' && document.getElementById('settingsPanel').style.display==='block'){
+    renderSettingsCalendar();
+  }
+  if(v==='book'){
+    renderCalendar();
+    renderSlotGrid();
+  }
+}
+
+/* ======================= BOOKING FORM ======================= */
+function renderSlotGrid(){
+  const dateVal = document.getElementById('fDate').value;
+  const grid = document.getElementById('slotGrid');
+  grid.innerHTML = '';
+  selectedSlot = null;
+
+  const daySlots = allowedSlotsFor(dateVal);
+  if(dateVal && daySlots.length===0){
+    grid.innerHTML = '<div style="grid-column:1/-1; font-family:var(--mono); font-size:12px; color:var(--text-dim); padding:6px 2px;">วันนี้ไม่เปิดรับจอง (วันหยุดสุดสัปดาห์)</div>';
+    return;
+  }
+
+  const closedReason = dateVal ? personClosedDays(selectedPerson)[dateVal] : undefined;
+  if(dateVal && closedReason !== undefined){
+    grid.innerHTML = `<div style="grid-column:1/-1; font-family:var(--mono); font-size:12px; color:var(--coral); padding:6px 2px;">${personName(selectedPerson)} ปิดรับจองวันนี้${closedReason ? ': '+escapeHtml(closedReason) : ''}</div>`;
+    return;
+  }
+
+  daySlots.forEach(t=>{
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'slot-btn';
+    btn.textContent = slotLabel(t);
+    const taken = dateVal && bookings.some(b=>b.person===selectedPerson && b.date===dateVal && b.time===t && b.status!=='cancelled');
+    const slotClosedMap = personClosedSlots(selectedPerson)[dateVal];
+    const slotClosed = dateVal && slotClosedMap && slotClosedMap[t];
+    if(!dateVal || taken || slotClosed){
+      btn.disabled = true;
+      if(slotClosed && !taken) btn.title = 'ช่วงเวลานี้ปิดรับจอง';
+    }else{
+      btn.onclick = ()=>{
+        document.querySelectorAll('.slot-btn').forEach(b=>b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedSlot = t;
+      };
+    }
+    grid.appendChild(btn);
+  });
+}
+
+function submitBooking(){
+  const person = selectedPerson;
+  const name = document.getElementById('fName').value.trim();
+  const team = document.getElementById('fTeam').value.trim();
+  const topic = document.getElementById('fTopic').value.trim();
+  const date = document.getElementById('fDate').value;
+
+  if(!name || !topic || !date || !selectedSlot){
+    showToast('กรอกข้อมูลให้ครบ และเลือกเวลาด้วยนะ', true);
+    return;
+  }
+  if(personClosedDays(person).hasOwnProperty(date)){
+    showToast(personName(person) + ' ปิดรับจองวันนี้', true);
+    return;
+  }
+
+  openConfirmModal({ person, name, team, topic, date, time: selectedSlot });
+}
+
+function openConfirmModal(draft){
+  pendingBooking = draft;
+  document.getElementById('confirmSummary').innerHTML = `
+    <div class="confirm-row"><span>นัดกับ</span><b>${escapeHtml(personName(draft.person))}</b></div>
+    <div class="confirm-row"><span>ผู้จอง</span><b>${escapeHtml(draft.name)}</b></div>
+    <div class="confirm-row"><span>ทีม/แผนก</span><b>${escapeHtml(draft.team || '—')}</b></div>
+    <div class="confirm-row"><span>หัวข้อ</span><b>${escapeHtml(draft.topic)}</b></div>
+    <div class="confirm-row"><span>วันที่</span><b>${draft.date}</b></div>
+    <div class="confirm-row"><span>เวลา</span><b>${slotLabel(draft.time)}</b></div>
+  `;
+  document.getElementById('confirmOverlay').classList.add('show');
+}
+function closeConfirmModal(){
+  document.getElementById('confirmOverlay').classList.remove('show');
+  pendingBooking = null;
+}
+
+async function confirmBooking(){
+  if(!pendingBooking) return;
+  const { person, name, team, topic, date, time } = pendingBooking;
+  closeConfirmModal();
+
+  // race-check again before saving
+  await loadData();
+  if(personClosedDays(person).hasOwnProperty(date)){
+    showToast(personName(person) + ' เพิ่งถูกปิดรับจองวันนี้', true);
+    renderSlotGrid();
+    renderCalendar();
+    return;
+  }
+  const closedSlotMap = personClosedSlots(person)[date];
+  if(closedSlotMap && closedSlotMap[time]){
+    showToast('ช่วงเวลานี้เพิ่งถูกปิดรับจอง ลองเลือกใหม่', true);
+    renderSlotGrid();
+    renderCalendar();
+    return;
+  }
+  if(bookings.some(b=>b.person===person && b.date===date && b.time===time && b.status!=='cancelled')){
+    showToast('ช่วงเวลานี้เพิ่งถูกจองไปแล้ว ลองเลือกใหม่', true);
+    renderSlotGrid();
+    renderCalendar();
+    return;
+  }
+
+  const booking = {
+    id: 'bk_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    person, name, team, topic, date, time,
+    status: 'confirmed',
+    createdAt: new Date().toISOString()
+  };
+  bookings.push(booking);
+  await saveBookings();
+
+  // fire-and-forget notify n8n -> discord
+  if(N8N_NEW_BOOKING_WEBHOOK){
+    fetch(N8N_NEW_BOOKING_WEBHOOK, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(booking)
+    }).catch(()=>{});
+  }
+
+  showToast('จองสำเร็จกับ ' + personName(person) + ': ' + date + ' เวลา ' + slotLabel(time));
+  document.getElementById('fName').value='';
+  document.getElementById('fTeam').value='';
+  document.getElementById('fTopic').value='';
+  renderSlotGrid();
+  renderCalendar();
+}
+
+/* ======================= CANCEL BOOKING ======================= */
+function openCancelModal(bookingId){
+  const b = bookings.find(x=>x.id===bookingId);
+  if(!b || b.status==='cancelled') return;
+  pendingCancelId = bookingId;
+  document.getElementById('cancelSummary').innerHTML = `
+    <div class="confirm-row"><span>นัดกับ</span><b>${escapeHtml(personName(b.person))}</b></div>
+    <div class="confirm-row"><span>ผู้จอง</span><b>${escapeHtml(b.name)}</b></div>
+    <div class="confirm-row"><span>ทีม/แผนก</span><b>${escapeHtml(b.team || '—')}</b></div>
+    <div class="confirm-row"><span>หัวข้อ</span><b>${escapeHtml(b.topic)}</b></div>
+    <div class="confirm-row"><span>วันที่</span><b>${b.date}</b></div>
+    <div class="confirm-row"><span>เวลา</span><b>${slotLabel(b.time)}</b></div>
+  `;
+  document.getElementById('cancelReasonInput').value = '';
+  document.getElementById('cancelOverlay').classList.add('show');
+}
+function closeCancelModal(){
+  document.getElementById('cancelOverlay').classList.remove('show');
+  pendingCancelId = null;
+}
+async function confirmCancel(){
+  if(!pendingCancelId) return;
+  const reason = document.getElementById('cancelReasonInput').value.trim();
+  if(!reason){
+    showToast('กรุณาใส่เหตุผลที่ยกเลิก', true);
+    return;
+  }
+  const bookingId = pendingCancelId;
+  closeCancelModal();
+
+  // reload fresh data in case someone else changed it
+  await loadData();
+  const b = bookings.find(x=>x.id===bookingId);
+  if(!b || b.status==='cancelled'){
+    showToast('รายการนี้ถูกยกเลิกไปแล้ว', true);
+    renderCalendar();
+    renderSlotGrid();
+    return;
+  }
+  b.status = 'cancelled';
+  b.cancelReason = reason;
+  b.cancelledAt = new Date().toISOString();
+  await saveBookings();
+
+  // fire-and-forget notify n8n -> discord
+  if(N8N_CANCEL_BOOKING_WEBHOOK){
+    fetch(N8N_CANCEL_BOOKING_WEBHOOK, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(b)
+    }).catch(()=>{});
+  }
+
+  showToast('ยกเลิกการจองแล้ว: ' + b.date + ' เวลา ' + slotLabel(b.time));
+  renderCalendar();
+  renderSlotGrid();
+}
+
+/* ======================= CALENDAR (Month view) ======================= */
+const THAI_MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
+                      "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+const THAI_MONTHS_ABBR = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.",
+                           "ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const WEEKDAY_FULL = ["วันจันทร์","วันอังคาร","วันพุธ","วันพฤหัสบดี","วันศุกร์","วันเสาร์","วันอาทิตย์"];
+
+let calYear, calMonth; // calMonth is 0-indexed
+
+function initCalendarState(){
+  const t = new Date();
+  calYear = t.getFullYear();
+  calMonth = t.getMonth();
+}
+function shiftMonth(n){
+  calMonth += n;
+  if(calMonth < 0){ calMonth = 11; calYear--; }
+  if(calMonth > 11){ calMonth = 0; calYear++; }
+  refreshVisibleCalendar();
+}
+function goToday(){
+  const t = new Date();
+  calYear = t.getFullYear();
+  calMonth = t.getMonth();
+  refreshVisibleCalendar();
+}
+function refreshVisibleCalendar(){
+  if(document.getElementById('viewSettings').classList.contains('active')){
+    renderSettingsCalendar();
+  }else{
+    renderCalendar();
+  }
+}
+
+function renderCalendar(){
+  const wrap = document.getElementById('calWrap');
+
+  const firstOfMonth = new Date(calYear, calMonth, 1);
+  const lastOfMonth = new Date(calYear, calMonth + 1, 0);
+
+  const leadOffset = (firstOfMonth.getDay() + 6) % 7; // Mon=0..Sun=6
+  const startGrid = new Date(firstOfMonth);
+  startGrid.setDate(startGrid.getDate() - leadOffset);
+
+  const trailOffset = (lastOfMonth.getDay() + 6) % 7;
+  const endGrid = new Date(lastOfMonth);
+  endGrid.setDate(endGrid.getDate() + (6 - trailOffset));
+
+  const todayIso = toISO(new Date());
+
+  let cellsHtml = '';
+  const cursor = new Date(startGrid);
+  while(cursor <= endGrid){
+    const iso = toISO(cursor);
+    const inMonth = cursor.getMonth() === calMonth;
+    const isToday = iso === todayIso;
+    const closedReason = personClosedDays(selectedPerson)[iso];
+    const dayBookings = bookings.filter(b=>b.person===selectedPerson && b.date===iso && b.status!=='cancelled').sort((a,b)=> a.time < b.time ? -1 : 1);
+
+    let chipsHtml = '';
+    if(closedReason !== undefined){
+      chipsHtml += `<div class="day-chip closed-chip">ปิดรับจอง${closedReason ? ': '+escapeHtml(closedReason) : ''}</div>`;
+    }
+    dayBookings.forEach(b=>{
+      chipsHtml += `<div class="day-chip" onclick="openCancelModal('${b.id}')" title="${escapeHtml(b.name)} — ${escapeHtml(b.topic)} (คลิกเพื่อยกเลิก)">${b.time} ${escapeHtml(b.name)}</div>`;
+    });
+
+    const dateLabel = (!inMonth || cursor.getDate()===1)
+      ? `${cursor.getDate()} ${THAI_MONTHS_ABBR[cursor.getMonth()]}`
+      : cursor.getDate();
+
+    cellsHtml += `<div class="month-cell${inMonth?'':' other-month'}${isToday?' today':''}">
+        <div class="date-num">${isToday ? `<span class="today-badge">${cursor.getDate()}</span>` : dateLabel}</div>
+        <div class="chips">${chipsHtml}</div>
+      </div>`;
+
+    cursor.setDate(cursor.getDate()+1);
+  }
+
+  wrap.innerHTML = `
+    <div class="month-nav">
+      <button class="today-btn" onclick="goToday()">วันนี้</button>
+      <div class="month-title">
+        <button class="arrow" onclick="shiftMonth(-1)" aria-label="เดือนก่อนหน้า">&lsaquo;</button>
+        <span>${THAI_MONTHS[calMonth]} ${calYear}</span>
+        <button class="arrow" onclick="shiftMonth(1)" aria-label="เดือนถัดไป">&rsaquo;</button>
+      </div>
+      <div style="width:64px;"></div>
+    </div>
+    <div class="month-grid">
+      ${WEEKDAY_FULL.map(d=>`<div class="month-daylabel">${d}</div>`).join('')}
+      ${cellsHtml}
+    </div>
+  `;
+}
+
+/* ======================= SETTINGS ======================= */
+function tryUnlock(){
+  const val = document.getElementById('pwInput').value;
+  if(val === SETTINGS_PASSWORD){
+    document.getElementById('lockScreen').style.display='none';
+    document.getElementById('settingsPanel').style.display='block';
+    document.getElementById('pwErr').style.display='none';
+    renderSettingsCalendar();
+  }else{
+    document.getElementById('pwErr').style.display='block';
+  }
+}
+function lockSettings(){
+  document.getElementById('pwInput').value='';
+  document.getElementById('lockScreen').style.display='block';
+  document.getElementById('settingsPanel').style.display='none';
+}
+
+/* ======================= SETTINGS CALENDAR ======================= */
+function renderSettingsCalendar(){
+  const wrap = document.getElementById('settingsCalWrap');
+
+  const firstOfMonth = new Date(calYear, calMonth, 1);
+  const lastOfMonth = new Date(calYear, calMonth + 1, 0);
+  const leadOffset = (firstOfMonth.getDay() + 6) % 7;
+  const startGrid = new Date(firstOfMonth);
+  startGrid.setDate(startGrid.getDate() - leadOffset);
+  const trailOffset = (lastOfMonth.getDay() + 6) % 7;
+  const endGrid = new Date(lastOfMonth);
+  endGrid.setDate(endGrid.getDate() + (6 - trailOffset));
+
+  const todayIso = toISO(new Date());
+  const todayMid = new Date(); todayMid.setHours(0,0,0,0);
+
+  let cellsHtml = '';
+  const cursor = new Date(startGrid);
+  while(cursor <= endGrid){
+    const iso = toISO(cursor);
+    const inMonth = cursor.getMonth() === calMonth;
+    const isToday = iso === todayIso;
+    const dow = cursor.getDay();
+    const isWeekday = (DAY_SLOTS[dow] || []).length > 0;
+    const isPast = cursor < todayMid;
+    const clickable = isWeekday && !isPast;
+
+    const closedReason = personClosedDays(settingsPerson)[iso];
+    const isFullyClosed = closedReason !== undefined;
+    const slotMap = personClosedSlots(settingsPerson)[iso];
+    const partialCount = (slotMap && !isFullyClosed) ? Object.keys(slotMap).length : 0;
+
+    let badges = '';
+    if(isFullyClosed) badges += `<span class="badge-closed-day">ปิดทั้งวัน</span>`;
+    else if(partialCount > 0) badges += `<span class="badge-partial">ปิด ${partialCount} ช่วง</span>`;
+
+    const dateLabel = (!inMonth || cursor.getDate()===1)
+      ? `${cursor.getDate()} ${THAI_MONTHS_ABBR[cursor.getMonth()]}`
+      : cursor.getDate();
+
+    const cellClass = `month-cell${inMonth?'':' other-month'}${isToday?' today':''}${clickable?' settings-clickable':' settings-disabled'}`;
+    const clickAttr = clickable ? ` onclick="openDaySettingsModal('${iso}')"` : '';
+
+    cellsHtml += `<div class="${cellClass}"${clickAttr}>
+        <div class="date-num">${isToday ? `<span class="today-badge">${cursor.getDate()}</span>` : dateLabel}</div>
+        <div class="day-status-badges">${badges}</div>
+      </div>`;
+
+    cursor.setDate(cursor.getDate()+1);
+  }
+
+  wrap.innerHTML = `
+    <div class="month-nav">
+      <button class="today-btn" onclick="goToday()">วันนี้</button>
+      <div class="month-title">
+        <button class="arrow" onclick="shiftMonth(-1)" aria-label="เดือนก่อนหน้า">&lsaquo;</button>
+        <span>${THAI_MONTHS[calMonth]} ${calYear}</span>
+        <button class="arrow" onclick="shiftMonth(1)" aria-label="เดือนถัดไป">&rsaquo;</button>
+      </div>
+      <div style="width:64px;"></div>
+    </div>
+    <div class="month-grid">
+      ${WEEKDAY_FULL.map(d=>`<div class="month-daylabel">${d}</div>`).join('')}
+      ${cellsHtml}
+    </div>
+  `;
+}
+
+function openDaySettingsModal(iso){
+  currentSettingsDate = iso;
+  const dow = new Date(iso + 'T00:00:00').getDay();
+  const daySlots = DAY_SLOTS[dow] || [];
+  const dayClosedMap = personClosedDays(settingsPerson);
+  const slotClosedMap = personClosedSlots(settingsPerson)[iso];
+  const isFullyClosed = dayClosedMap.hasOwnProperty(iso);
+
+  document.getElementById('daySettingsTitle').textContent = `ตั้งค่าวันที่ ${iso} — ${personName(settingsPerson)}`;
+  document.getElementById('wholeDaySwitch').classList.toggle('on', isFullyClosed);
+  document.getElementById('wholeDayReasonInput').value = dayClosedMap[iso] || '';
+  document.getElementById('wholeDayReasonInput').style.visibility = isFullyClosed ? 'visible' : 'hidden';
+
+  const listEl = document.getElementById('slotToggleList');
+  listEl.innerHTML = daySlots.map(t=>{
+    const isSlotClosed = !!(slotClosedMap && slotClosedMap[t]);
+    const isBooked = bookings.some(b=>b.person===settingsPerson && b.date===iso && b.time===t && b.status!=='cancelled');
+    return `<div class="slot-toggle-row${isFullyClosed?' slot-disabled':''}">
+        <div class="str-label">${slotLabel(t)}${isBooked ? '<span class="booked-tag">มีคนจองอยู่</span>' : ''}</div>
+        <div class="switch small ${isSlotClosed?'on':''}" data-time="${t}" onclick="toggleSlotInModal(this)"><div class="knob"></div></div>
+      </div>`;
+  }).join('') || '<div style="font-family:var(--mono); font-size:12px; color:var(--text-dim);">วันนี้ไม่มีช่วงเวลาให้ตั้งค่า</div>';
+
+  document.getElementById('daySettingsOverlay').classList.add('show');
+}
+function closeDaySettingsModal(){
+  document.getElementById('daySettingsOverlay').classList.remove('show');
+  currentSettingsDate = null;
+  renderSettingsCalendar();
+  renderCalendar();
+  renderSlotGrid();
+}
+async function toggleWholeDayInModal(){
+  const iso = currentSettingsDate;
+  if(!iso) return;
+  const dayClosedMap = personClosedDays(settingsPerson);
+  const willClose = !dayClosedMap.hasOwnProperty(iso);
+  if(willClose){
+    dayClosedMap[iso] = document.getElementById('wholeDayReasonInput').value.trim();
+  }else{
+    delete dayClosedMap[iso];
+  }
+  await saveClosedDays();
+  document.getElementById('wholeDaySwitch').classList.toggle('on', willClose);
+  document.getElementById('wholeDayReasonInput').style.visibility = willClose ? 'visible' : 'hidden';
+  document.querySelectorAll('#slotToggleList .slot-toggle-row').forEach(row=>{
+    row.classList.toggle('slot-disabled', willClose);
+  });
+}
+async function updateWholeDayReasonInModal(){
+  const iso = currentSettingsDate;
+  const dayClosedMap = personClosedDays(settingsPerson);
+  if(iso && dayClosedMap.hasOwnProperty(iso)){
+    dayClosedMap[iso] = document.getElementById('wholeDayReasonInput').value.trim();
+    await saveClosedDays();
+  }
+}
+async function toggleSlotInModal(el){
+  const iso = currentSettingsDate;
+  const t = el.getAttribute('data-time');
+  if(!iso) return;
+  const slotMap = personClosedSlots(settingsPerson);
+  if(!slotMap[iso]) slotMap[iso] = {};
+  const willClose = !slotMap[iso][t];
+  if(willClose){
+    slotMap[iso][t] = true;
+  }else{
+    delete slotMap[iso][t];
+    if(Object.keys(slotMap[iso]).length === 0) delete slotMap[iso];
+  }
+  await saveClosedSlots();
+  el.classList.toggle('on', willClose);
+}
+
+/* ======================= INIT ======================= */
+function populatePersonSelects(){
+  const opts = PEOPLE.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  document.getElementById('fPerson').innerHTML = opts;
+  document.getElementById('fPerson').value = selectedPerson;
+  document.getElementById('settingsPersonSelect').innerHTML = opts;
+  document.getElementById('settingsPersonSelect').value = settingsPerson;
+  document.getElementById('calPersonLabel').textContent = personName(selectedPerson);
+}
+function onPersonChange(){
+  selectedPerson = document.getElementById('fPerson').value;
+  document.getElementById('calPersonLabel').textContent = personName(selectedPerson);
+  renderSlotGrid();
+  renderCalendar();
+}
+function onSettingsPersonChange(){
+  settingsPerson = document.getElementById('settingsPersonSelect').value;
+  renderSettingsCalendar();
+}
+
+async function init(){
+  await loadData();
+  initCalendarState();
+  populatePersonSelects();
+  const today = new Date();
+  document.getElementById('fDate').value = toISO(today);
+  document.getElementById('fDate').min = toISO(today);
+  document.getElementById('fDate').addEventListener('change', renderSlotGrid);
+  renderSlotGrid();
+  renderCalendar();
+}
+init();
+</script>
+</body>
+</html>
