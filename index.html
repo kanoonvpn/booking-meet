@@ -643,7 +643,7 @@
 const SETTINGS_PASSWORD = "devteam2026";
 
 // ใส่ URL ของ n8n Webhook สำหรับแจ้งเตือน Discord เมื่อมีการจองใหม่ (ดูวิธีตั้งค่าด้านล่างของแชท)
-const N8N_NEW_BOOKING_WEBHOOK = "https://n8n-external.exservice.io/webhook/new-booking"; // เช่น "https://your-n8n.app/webhook/new-booking" 
+const N8N_NEW_BOOKING_WEBHOOK = "https://n8n-external.exservice.io/webhook/new-booking"; // เช่น "https://your-n8n.app/webhook/new-booking"
 const N8N_CANCEL_BOOKING_WEBHOOK = "https://n8n-external.exservice.io/webhook/cancel-booking"; // เช่น "https://your-n8n.app/webhook/cancel-booking"
 
 // รายชื่อคนที่เปิดให้จอง แต่ละคนมีตารางเวลา (การจอง/ปิดรับจอง) แยกจากกันอิสระ
@@ -863,13 +863,17 @@ async function confirmBooking(){
   bookings.push(booking);
   await saveBookings();
 
-  // fire-and-forget notify n8n -> discord
+  // fire-and-forget notify n8n -> discord (wrapped so a bad URL/network error never blocks the booking flow)
   if(N8N_NEW_BOOKING_WEBHOOK){
-    fetch(N8N_NEW_BOOKING_WEBHOOK, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(booking)
-    }).catch(()=>{});
+    try{
+      fetch(N8N_NEW_BOOKING_WEBHOOK, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(booking)
+      }).catch(()=>{});
+    }catch(e){
+      console.warn('n8n webhook (new booking) failed to send:', e);
+    }
   }
 
   showToast('จองสำเร็จกับ ' + personName(person) + ': ' + date + ' เวลา ' + slotLabel(time));
@@ -924,13 +928,17 @@ async function confirmCancel(){
   b.cancelledAt = new Date().toISOString();
   await saveBookings();
 
-  // fire-and-forget notify n8n -> discord
+  // fire-and-forget notify n8n -> discord (wrapped so a bad URL/network error never blocks the cancel flow)
   if(N8N_CANCEL_BOOKING_WEBHOOK){
-    fetch(N8N_CANCEL_BOOKING_WEBHOOK, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(b)
-    }).catch(()=>{});
+    try{
+      fetch(N8N_CANCEL_BOOKING_WEBHOOK, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(b)
+      }).catch(()=>{});
+    }catch(e){
+      console.warn('n8n webhook (cancel booking) failed to send:', e);
+    }
   }
 
   showToast('ยกเลิกการจองแล้ว: ' + b.date + ' เวลา ' + slotLabel(b.time));
