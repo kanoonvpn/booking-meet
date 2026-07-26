@@ -643,8 +643,14 @@
 const SETTINGS_PASSWORD = "devteam2026";
 
 // ใส่ URL ของ n8n Webhook สำหรับแจ้งเตือน Discord เมื่อมีการจองใหม่ (ดูวิธีตั้งค่าด้านล่างของแชท)
-const N8N_NEW_BOOKING_WEBHOOK = "https://n8n-external.exservice.io/webhook/new-booking"; // เช่น "https://your-n8n.app/webhook/new-booking"
-const N8N_CANCEL_BOOKING_WEBHOOK = "https://n8n-external.exservice.io/webhook/cancel-booking"; // เช่น "https://your-n8n.app/webhook/cancel-booking"
+const N8N_NEW_BOOKING_WEBHOOK = "https://n8n-external.exservice.io/webhook/new-booking";
+const N8N_CANCEL_BOOKING_WEBHOOK = "https://n8n-external.exservice.io/webhook/cancel-booking";
+
+// ===== ใหม่: n8n Data API — ใช้แทน window.storage เพราะ window.storage ใช้ได้แค่ใน Claude Artifacts เท่านั้น =====
+// เว็บที่ deploy จริง (Vercel ฯลฯ) ต้องมี backend จริงถึงจะให้ทุกคนเห็นข้อมูลชุดเดียวกันได้
+const N8N_GET_DATA_WEBHOOK = "https://n8n-external.exservice.io/webhook/get-data"; // GET: คืน {bookings, closedDays, closedSlots}
+const N8N_TOGGLE_DAY_WEBHOOK = "https://n8n-external.exservice.io/webhook/toggle-day"; // POST: {person,date,closed,reason}
+const N8N_TOGGLE_SLOT_WEBHOOK = "https://n8n-external.exservice.io/webhook/toggle-slot"; // POST: {person,date,time,closed}
 
 // รายชื่อคนที่เปิดให้จอง แต่ละคนมีตารางเวลา (การจอง/ปิดรับจอง) แยกจากกันอิสระ
 // เพิ่ม/ลบคนได้ตรงนี้ — id ห้ามซ้ำ ห้ามมีช่องว่าง ใช้เป็น key เก็บข้อมูล
@@ -697,29 +703,61 @@ function personClosedSlots(id){
   return closedSlots[id];
 }
 
-/* ======================= STORAGE HELPERS ======================= */
+/* ======================= DATA API (n8n + Google Sheets) ======================= */
+// หมายเหตุ: เดิมระบบนี้ใช้ window.storage (ใช้ได้แค่ตอนรันใน Claude Artifacts เท่านั้น)
+// เพราะต้อง deploy เป็นเว็บจริงให้ทุกคนเห็นข้อมูลชุดเดียวกัน จึงเปลี่ยนมาใช้ n8n + Google Sheets เป็น backend แทน
 async function loadData(){
+  if(!N8N_GET_DATA_WEBHOOK){
+    console.warn('[data] N8N_GET_DATA_WEBHOOK ยังไม่ได้ตั้งค่า ใช้ข้อมูลว่างเปล่าไปก่อน');
+    bookings = []; closedDays = {}; closedSlots = {};
+    return;
+  }
   try{
-    const b = await window.storage.get('bookings', true);
-    bookings = b ? JSON.parse(b.value) : [];
-  }catch(e){ bookings = []; }
-  try{
-    const c = await window.storage.get('closed-days', true);
-    closedDays = c ? JSON.parse(c.value) : {};
-  }catch(e){ closedDays = {}; }
-  try{
-    const s = await window.storage.get('closed-slots', true);
-    closedSlots = s ? JSON.parse(s.value) : {};
-  }catch(e){ closedSlots = {}; }
+    const res = await fetch(N8N_GET_DATA_WEBHOOK);
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    bookings = data.bookings || [];
+    closedDays = data.closedDays || {};
+    closedSlots = data.closedSlots || {};
+  }catch(e){
+    console.error('[data] โหลดข้อมูลจาก n8n ไม่สำเร็จ:', e);
+    showToast('โหลดข้อมูลไม่สำเร็จ (เช็คการเชื่อมต่อ n8n) ลองรีเฟรชหน้าใหม่', true);
+    bookings = bookings || []; closedDays = closedDays || {}; closedSlots = closedSlots || {};
+  }
 }
-async function saveBookings(){
-  await window.storage.set('bookings', JSON.stringify(bookings), true);
+
+// ยิงการจองใหม่ไปที่ n8n (n8n จะเป็นคนบันทึกลง Google Sheets จริงๆ ให้ — ไม่มี "save" แยกอีกต่อไป)
+async function persistNewBooking(booking){
+  const res = await fetch(N8N_NEW_BOOKING_WEBHOOK, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(booking)
+  });
+  if(!res.ok) throw new Error('HTTP ' + res.status);
 }
-async function saveClosedDays(){
-  await window.storage.set('closed-days', JSON.stringify(closedDays), true);
+async function persistCancelBooking(booking){
+  const res = await fetch(N8N_CANCEL_BOOKING_WEBHOOK, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(booking)
+  });
+  if(!res.ok) throw new Error('HTTP ' + res.status);
 }
-async function saveClosedSlots(){
-  await window.storage.set('closed-slots', JSON.stringify(closedSlots), true);
+async function persistToggleDay(person, date, closed, reason){
+  const res = await fetch(N8N_TOGGLE_DAY_WEBHOOK, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ person, date, closed, reason: reason || '' })
+  });
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+}
+async function persistToggleSlot(person, date, time, closed){
+  const res = await fetch(N8N_TOGGLE_SLOT_WEBHOOK, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ person, date, time, closed })
+  });
+  if(!res.ok) throw new Error('HTTP ' + res.status);
 }
 
 /* ======================= UTIL ======================= */
@@ -860,27 +898,19 @@ async function confirmBooking(){
     status: 'confirmed',
     createdAt: new Date().toISOString()
   };
-  bookings.push(booking);
-  await saveBookings();
 
-  // fire-and-forget notify n8n -> discord (wrapped so a bad URL/network error never blocks the booking flow)
-  if(N8N_NEW_BOOKING_WEBHOOK){
+  // บันทึกจริงผ่าน n8n (n8n จะเขียนลง Google Sheets ให้) — รอผลก่อนถึงจะถือว่าสำเร็จ
+  bookings.push(booking); // optimistic update ให้ UI ตอบสนองไว
+  try{
     console.log('[n8n] sending new-booking webhook to:', N8N_NEW_BOOKING_WEBHOOK, booking);
-    try{
-      fetch(N8N_NEW_BOOKING_WEBHOOK, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(booking)
-      }).then(res=>{
-        console.log('[n8n] new-booking webhook response:', res.status, res.statusText);
-      }).catch(err=>{
-        console.error('[n8n] new-booking webhook request failed:', err);
-      });
-    }catch(e){
-      console.error('[n8n] new-booking webhook threw synchronously (likely malformed URL):', e);
-    }
-  }else{
-    console.log('[n8n] N8N_NEW_BOOKING_WEBHOOK is empty — skipping notification');
+    await persistNewBooking(booking);
+  }catch(e){
+    console.error('[n8n] บันทึกการจองไม่สำเร็จ:', e);
+    bookings.pop(); // rollback
+    showToast('บันทึกการจองไม่สำเร็จ กรุณาลองใหม่ (เช็คการเชื่อมต่อ n8n)', true);
+    renderSlotGrid();
+    renderCalendar();
+    return;
   }
 
   showToast('จองสำเร็จกับ ' + personName(person) + ': ' + date + ' เวลา ' + slotLabel(time));
@@ -933,26 +963,19 @@ async function confirmCancel(){
   b.status = 'cancelled';
   b.cancelReason = reason;
   b.cancelledAt = new Date().toISOString();
-  await saveBookings();
 
-  // fire-and-forget notify n8n -> discord (wrapped so a bad URL/network error never blocks the cancel flow)
-  if(N8N_CANCEL_BOOKING_WEBHOOK){
+  try{
     console.log('[n8n] sending cancel-booking webhook to:', N8N_CANCEL_BOOKING_WEBHOOK, b);
-    try{
-      fetch(N8N_CANCEL_BOOKING_WEBHOOK, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(b)
-      }).then(res=>{
-        console.log('[n8n] cancel-booking webhook response:', res.status, res.statusText);
-      }).catch(err=>{
-        console.error('[n8n] cancel-booking webhook request failed:', err);
-      });
-    }catch(e){
-      console.error('[n8n] cancel-booking webhook threw synchronously (likely malformed URL):', e);
-    }
-  }else{
-    console.log('[n8n] N8N_CANCEL_BOOKING_WEBHOOK is empty — skipping notification');
+    await persistCancelBooking(b);
+  }catch(e){
+    console.error('[n8n] ยกเลิกการจองไม่สำเร็จ:', e);
+    b.status = 'confirmed'; // rollback
+    delete b.cancelReason;
+    delete b.cancelledAt;
+    showToast('ยกเลิกไม่สำเร็จ กรุณาลองใหม่ (เช็คการเชื่อมต่อ n8n)', true);
+    renderCalendar();
+    renderSlotGrid();
+    return;
   }
 
   showToast('ยกเลิกการจองแล้ว: ' + b.date + ' เวลา ' + slotLabel(b.time));
@@ -1179,24 +1202,47 @@ async function toggleWholeDayInModal(){
   if(!iso) return;
   const dayClosedMap = personClosedDays(settingsPerson);
   const willClose = !dayClosedMap.hasOwnProperty(iso);
-  if(willClose){
-    dayClosedMap[iso] = document.getElementById('wholeDayReasonInput').value.trim();
-  }else{
-    delete dayClosedMap[iso];
-  }
-  await saveClosedDays();
+  const reasonVal = document.getElementById('wholeDayReasonInput').value.trim();
+  const prevReason = dayClosedMap[iso];
+
+  // optimistic UI update
+  if(willClose){ dayClosedMap[iso] = reasonVal; } else { delete dayClosedMap[iso]; }
   document.getElementById('wholeDaySwitch').classList.toggle('on', willClose);
   document.getElementById('wholeDayReasonInput').style.visibility = willClose ? 'visible' : 'hidden';
   document.querySelectorAll('#slotToggleList .slot-toggle-row').forEach(row=>{
     row.classList.toggle('slot-disabled', willClose);
   });
+
+  try{
+    await persistToggleDay(settingsPerson, iso, willClose, reasonVal);
+  }catch(e){
+    console.error('[n8n] ตั้งค่าปิดทั้งวันไม่สำเร็จ:', e);
+    // rollback
+    if(willClose){ delete dayClosedMap[iso]; } else { dayClosedMap[iso] = prevReason; }
+    document.getElementById('wholeDaySwitch').classList.toggle('on', !willClose);
+    document.getElementById('wholeDayReasonInput').style.visibility = !willClose ? 'visible' : 'hidden';
+    document.querySelectorAll('#slotToggleList .slot-toggle-row').forEach(row=>{
+      row.classList.toggle('slot-disabled', !willClose);
+    });
+    showToast('บันทึกไม่สำเร็จ กรุณาลองใหม่ (เช็คการเชื่อมต่อ n8n)', true);
+    return;
+  }
+  renderSettingsCalendar();
 }
 async function updateWholeDayReasonInModal(){
   const iso = currentSettingsDate;
   const dayClosedMap = personClosedDays(settingsPerson);
-  if(iso && dayClosedMap.hasOwnProperty(iso)){
-    dayClosedMap[iso] = document.getElementById('wholeDayReasonInput').value.trim();
-    await saveClosedDays();
+  if(!iso || !dayClosedMap.hasOwnProperty(iso)) return;
+  const newReason = document.getElementById('wholeDayReasonInput').value.trim();
+  const prevReason = dayClosedMap[iso];
+  dayClosedMap[iso] = newReason;
+  try{
+    await persistToggleDay(settingsPerson, iso, true, newReason);
+  }catch(e){
+    console.error('[n8n] แก้เหตุผลไม่สำเร็จ:', e);
+    dayClosedMap[iso] = prevReason;
+    document.getElementById('wholeDayReasonInput').value = prevReason;
+    showToast('บันทึกเหตุผลไม่สำเร็จ กรุณาลองใหม่', true);
   }
 }
 async function toggleSlotInModal(el){
@@ -1206,14 +1252,23 @@ async function toggleSlotInModal(el){
   const slotMap = personClosedSlots(settingsPerson);
   if(!slotMap[iso]) slotMap[iso] = {};
   const willClose = !slotMap[iso][t];
-  if(willClose){
-    slotMap[iso][t] = true;
-  }else{
-    delete slotMap[iso][t];
-    if(Object.keys(slotMap[iso]).length === 0) delete slotMap[iso];
-  }
-  await saveClosedSlots();
+
+  // optimistic UI update
+  if(willClose){ slotMap[iso][t] = true; } else { delete slotMap[iso][t]; if(Object.keys(slotMap[iso]).length === 0) delete slotMap[iso]; }
   el.classList.toggle('on', willClose);
+
+  try{
+    await persistToggleSlot(settingsPerson, iso, t, willClose);
+  }catch(e){
+    console.error('[n8n] ตั้งค่าปิดช่วงเวลาไม่สำเร็จ:', e);
+    // rollback
+    if(!slotMap[iso]) slotMap[iso] = {};
+    if(willClose){ delete slotMap[iso][t]; if(Object.keys(slotMap[iso]).length===0) delete slotMap[iso]; } else { slotMap[iso][t] = true; }
+    el.classList.toggle('on', !willClose);
+    showToast('บันทึกไม่สำเร็จ กรุณาลองใหม่ (เช็คการเชื่อมต่อ n8n)', true);
+    return;
+  }
+  renderSettingsCalendar();
 }
 
 /* ======================= INIT ======================= */
