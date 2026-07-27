@@ -346,6 +346,64 @@
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
   .toast.err{ border-left-color:var(--coral); }
 
+  .app-loading-overlay{
+    position:fixed;
+    inset:0;
+    background:var(--paper);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    z-index:300;
+    transition:opacity .25s;
+  }
+  .app-loading-overlay.hide{
+    opacity:0;
+    pointer-events:none;
+  }
+  .spinner{
+    width:34px; height:34px;
+    border:3px solid var(--line);
+    border-top-color:var(--teal);
+    border-radius:50%;
+    animation:spin .8s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .app-loading-overlay .loading-text{
+    font-family:var(--mono);
+    font-size:13px;
+    color:var(--text-dim);
+  }
+  .btn-spinner{
+    display:inline-block;
+    width:13px; height:13px;
+    border:2px solid rgba(255,255,255,0.35);
+    border-top-color:#fff;
+    border-radius:50%;
+    animation:spin .7s linear infinite;
+    margin-right:7px;
+    vertical-align:-2px;
+  }
+  .modal-btn.ghost .btn-spinner{
+    border-color:rgba(92,101,112,0.3);
+    border-top-color:var(--text-dim);
+  }
+  .switch.syncing{
+    opacity:0.5;
+    pointer-events:none;
+  }
+  .inline-spinner{
+    display:inline-block;
+    width:11px; height:11px;
+    border:2px solid var(--line);
+    border-top-color:var(--teal);
+    border-radius:50%;
+    animation:spin .7s linear infinite;
+    margin-left:6px;
+    vertical-align:-1px;
+  }
+
   .modal-overlay{
     position:fixed;
     inset:0;
@@ -511,6 +569,12 @@
 </head>
 <body>
 
+<div class="app-loading-overlay" id="appLoadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">กำลังโหลดข้อมูล...</div>
+</div>
+
+
 <header>
   <div class="brand">
     <span class="glyph">&gt;_</span>
@@ -595,8 +659,8 @@
     <h3>ยืนยันการจองคิว</h3>
     <div id="confirmSummary"></div>
     <div class="modal-actions">
-      <button class="modal-btn ghost" onclick="closeConfirmModal()">แก้ไข</button>
-      <button class="modal-btn primary" onclick="confirmBooking()">ยืนยันการจอง</button>
+      <button class="modal-btn ghost" id="editBookingBtn" onclick="closeConfirmModal()">แก้ไข</button>
+      <button class="modal-btn primary" id="confirmBookingBtn" onclick="confirmBooking()">ยืนยันการจอง</button>
     </div>
   </div>
 </div>
@@ -608,8 +672,8 @@
     <label>เหตุผลที่ยกเลิก</label>
     <textarea id="cancelReasonInput" placeholder="เช่น ทีมงานติดประชุมด่วน / เลื่อนนัด"></textarea>
     <div class="modal-actions">
-      <button class="modal-btn ghost" onclick="closeCancelModal()">ปิด</button>
-      <button class="modal-btn danger" onclick="confirmCancel()">ยืนยันยกเลิก</button>
+      <button class="modal-btn ghost" id="closeCancelBtn" onclick="closeCancelModal()">ปิด</button>
+      <button class="modal-btn danger" id="confirmCancelBtn" onclick="confirmCancel()">ยืนยันยกเลิก</button>
     </div>
   </div>
 </div>
@@ -773,6 +837,29 @@ function showToast(msg, isErr){
   setTimeout(()=>{ t.className='toast'; }, 2600);
 }
 
+// เปิด/ปิดสถานะ "กำลังโหลด" บนปุ่ม (disable + โชว์ spinner) ระหว่างรอ n8n ตอบกลับ
+function setBtnLoading(btnEl, loading, loadingText){
+  if(!btnEl) return;
+  if(loading){
+    if(btnEl.dataset.originalText === undefined) btnEl.dataset.originalText = btnEl.textContent;
+    btnEl.disabled = true;
+    btnEl.innerHTML = '<span class="btn-spinner"></span>' + (loadingText || 'กำลังบันทึก...');
+  }else{
+    btnEl.disabled = false;
+    btnEl.textContent = btnEl.dataset.originalText !== undefined ? btnEl.dataset.originalText : btnEl.textContent;
+  }
+}
+// เปิด/ปิดสถานะ "กำลังซิงค์" บน toggle switch ระหว่างรอ n8n ตอบกลับ
+function setSwitchSyncing(switchEl, syncing){
+  if(!switchEl) return;
+  switchEl.classList.toggle('syncing', syncing);
+}
+function setBookingModalLoading(loading, text){
+  setBtnLoading(document.getElementById('confirmBookingBtn'), loading, text);
+  const editBtn = document.getElementById('editBookingBtn');
+  if(editBtn) editBtn.disabled = loading;
+}
+
 /* ======================= VIEW SWITCH ======================= */
 function switchView(v){
   document.getElementById('viewBook').classList.toggle('active', v==='book');
@@ -868,11 +955,13 @@ function closeConfirmModal(){
 async function confirmBooking(){
   if(!pendingBooking) return;
   const { person, name, team, topic, date, time } = pendingBooking;
-  closeConfirmModal();
+  setBookingModalLoading(true, 'กำลังตรวจสอบคิว...');
 
   // race-check again before saving
   await loadData();
   if(personClosedDays(person).hasOwnProperty(date)){
+    setBookingModalLoading(false);
+    closeConfirmModal();
     showToast(personName(person) + ' เพิ่งถูกปิดรับจองวันนี้', true);
     renderSlotGrid();
     renderCalendar();
@@ -880,12 +969,16 @@ async function confirmBooking(){
   }
   const closedSlotMap = personClosedSlots(person)[date];
   if(closedSlotMap && closedSlotMap[time]){
+    setBookingModalLoading(false);
+    closeConfirmModal();
     showToast('ช่วงเวลานี้เพิ่งถูกปิดรับจอง ลองเลือกใหม่', true);
     renderSlotGrid();
     renderCalendar();
     return;
   }
   if(bookings.some(b=>b.person===person && b.date===date && b.time===time && b.status!=='cancelled')){
+    setBookingModalLoading(false);
+    closeConfirmModal();
     showToast('ช่วงเวลานี้เพิ่งถูกจองไปแล้ว ลองเลือกใหม่', true);
     renderSlotGrid();
     renderCalendar();
@@ -900,6 +993,7 @@ async function confirmBooking(){
   };
 
   // บันทึกจริงผ่าน n8n (n8n จะเขียนลง Google Sheets ให้) — รอผลก่อนถึงจะถือว่าสำเร็จ
+  setBookingModalLoading(true, 'กำลังบันทึก...');
   bookings.push(booking); // optimistic update ให้ UI ตอบสนองไว
   try{
     console.log('[n8n] sending new-booking webhook to:', N8N_NEW_BOOKING_WEBHOOK, booking);
@@ -907,12 +1001,15 @@ async function confirmBooking(){
   }catch(e){
     console.error('[n8n] บันทึกการจองไม่สำเร็จ:', e);
     bookings.pop(); // rollback
+    setBookingModalLoading(false);
     showToast('บันทึกการจองไม่สำเร็จ กรุณาลองใหม่ (เช็คการเชื่อมต่อ n8n)', true);
     renderSlotGrid();
     renderCalendar();
-    return;
+    return; // เปิด popup ค้างไว้ ให้กดยืนยันใหม่ได้เลยโดยไม่ต้องกรอกฟอร์มซ้ำ
   }
 
+  setBookingModalLoading(false);
+  closeConfirmModal();
   showToast('จองสำเร็จกับ ' + personName(person) + ': ' + date + ' เวลา ' + slotLabel(time));
   document.getElementById('fName').value='';
   document.getElementById('fTeam').value='';
@@ -941,6 +1038,12 @@ function closeCancelModal(){
   document.getElementById('cancelOverlay').classList.remove('show');
   pendingCancelId = null;
 }
+function setCancelModalLoading(loading, text){
+  setBtnLoading(document.getElementById('confirmCancelBtn'), loading, text);
+  const closeBtn = document.getElementById('closeCancelBtn');
+  if(closeBtn) closeBtn.disabled = loading;
+}
+
 async function confirmCancel(){
   if(!pendingCancelId) return;
   const reason = document.getElementById('cancelReasonInput').value.trim();
@@ -949,12 +1052,14 @@ async function confirmCancel(){
     return;
   }
   const bookingId = pendingCancelId;
-  closeCancelModal();
+  setCancelModalLoading(true, 'กำลังตรวจสอบ...');
 
   // reload fresh data in case someone else changed it
   await loadData();
   const b = bookings.find(x=>x.id===bookingId);
   if(!b || b.status==='cancelled'){
+    setCancelModalLoading(false);
+    closeCancelModal();
     showToast('รายการนี้ถูกยกเลิกไปแล้ว', true);
     renderCalendar();
     renderSlotGrid();
@@ -964,6 +1069,7 @@ async function confirmCancel(){
   b.cancelReason = reason;
   b.cancelledAt = new Date().toISOString();
 
+  setCancelModalLoading(true, 'กำลังยกเลิก...');
   try{
     console.log('[n8n] sending cancel-booking webhook to:', N8N_CANCEL_BOOKING_WEBHOOK, b);
     await persistCancelBooking(b);
@@ -972,12 +1078,15 @@ async function confirmCancel(){
     b.status = 'confirmed'; // rollback
     delete b.cancelReason;
     delete b.cancelledAt;
+    setCancelModalLoading(false);
     showToast('ยกเลิกไม่สำเร็จ กรุณาลองใหม่ (เช็คการเชื่อมต่อ n8n)', true);
     renderCalendar();
     renderSlotGrid();
-    return;
+    return; // เปิด popup ค้างไว้ ให้กดยืนยันใหม่ได้เลย
   }
 
+  setCancelModalLoading(false);
+  closeCancelModal();
   showToast('ยกเลิกการจองแล้ว: ' + b.date + ' เวลา ' + slotLabel(b.time));
   renderCalendar();
   renderSlotGrid();
@@ -1212,6 +1321,7 @@ async function toggleWholeDayInModal(){
   document.querySelectorAll('#slotToggleList .slot-toggle-row').forEach(row=>{
     row.classList.toggle('slot-disabled', willClose);
   });
+  setSwitchSyncing(document.getElementById('wholeDaySwitch'), true);
 
   try{
     await persistToggleDay(settingsPerson, iso, willClose, reasonVal);
@@ -1224,9 +1334,11 @@ async function toggleWholeDayInModal(){
     document.querySelectorAll('#slotToggleList .slot-toggle-row').forEach(row=>{
       row.classList.toggle('slot-disabled', !willClose);
     });
+    setSwitchSyncing(document.getElementById('wholeDaySwitch'), false);
     showToast('บันทึกไม่สำเร็จ กรุณาลองใหม่ (เช็คการเชื่อมต่อ n8n)', true);
     return;
   }
+  setSwitchSyncing(document.getElementById('wholeDaySwitch'), false);
   renderSettingsCalendar();
 }
 async function updateWholeDayReasonInModal(){
@@ -1256,6 +1368,7 @@ async function toggleSlotInModal(el){
   // optimistic UI update
   if(willClose){ slotMap[iso][t] = true; } else { delete slotMap[iso][t]; if(Object.keys(slotMap[iso]).length === 0) delete slotMap[iso]; }
   el.classList.toggle('on', willClose);
+  setSwitchSyncing(el, true);
 
   try{
     await persistToggleSlot(settingsPerson, iso, t, willClose);
@@ -1265,9 +1378,11 @@ async function toggleSlotInModal(el){
     if(!slotMap[iso]) slotMap[iso] = {};
     if(willClose){ delete slotMap[iso][t]; if(Object.keys(slotMap[iso]).length===0) delete slotMap[iso]; } else { slotMap[iso][t] = true; }
     el.classList.toggle('on', !willClose);
+    setSwitchSyncing(el, false);
     showToast('บันทึกไม่สำเร็จ กรุณาลองใหม่ (เช็คการเชื่อมต่อ n8n)', true);
     return;
   }
+  setSwitchSyncing(el, false);
   renderSettingsCalendar();
 }
 
@@ -1292,15 +1407,21 @@ function onSettingsPersonChange(){
 }
 
 async function init(){
-  await loadData();
-  initCalendarState();
-  populatePersonSelects();
-  const today = new Date();
-  document.getElementById('fDate').value = toISO(today);
-  document.getElementById('fDate').min = toISO(today);
-  document.getElementById('fDate').addEventListener('change', renderSlotGrid);
-  renderSlotGrid();
-  renderCalendar();
+  const overlay = document.getElementById('appLoadingOverlay');
+  try{
+    await loadData();
+    initCalendarState();
+    populatePersonSelects();
+    const today = new Date();
+    document.getElementById('fDate').value = toISO(today);
+    document.getElementById('fDate').min = toISO(today);
+    document.getElementById('fDate').addEventListener('change', renderSlotGrid);
+    renderSlotGrid();
+    renderCalendar();
+  }finally{
+    overlay.classList.add('hide');
+    setTimeout(()=>{ overlay.style.display = 'none'; }, 300);
+  }
 }
 init();
 </script>
