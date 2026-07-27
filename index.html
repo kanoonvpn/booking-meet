@@ -630,8 +630,8 @@
     <div id="lockScreen" class="lock-screen">
       <div class="glyph">&#128274;</div>
       <div style="font-family:var(--mono); font-size:13px; color:var(--text-dim);">พื้นที่นี้สำหรับทีม Dev เท่านั้น</div>
-      <input type="text" id="pwInput" placeholder="รหัสผ่าน" onkeydown="if(event.key==='Enter')tryUnlock()">
-      <button class="submit-btn" onclick="tryUnlock()" style="max-width:280px;">เข้าสู่ระบบ</button>
+      <input type="password" id="pwInput" placeholder="รหัสผ่าน" onkeydown="if(event.key==='Enter')tryUnlock()">
+      <button class="submit-btn" id="unlockBtn" onclick="tryUnlock()" style="max-width:280px;">เข้าสู่ระบบ</button>
       <div class="err-text" id="pwErr">รหัสผ่านไม่ถูกต้อง</div>
     </div>
 
@@ -703,8 +703,10 @@
 
 <script>
 /* ======================= CONFIG ======================= */
-// เปลี่ยนรหัสผ่านหน้า Settings ตรงนี้
-const SETTINGS_PASSWORD = "devteam2026";
+// หมายเหตุความปลอดภัย: รหัสผ่านหน้า Settings ไม่ได้เก็บในโค้ดฝั่งนี้อีกต่อไป
+// (เดิมเก็บเป็น const ตรงนี้ ทำให้ใครก็ตามกด "View Page Source" อ่านรหัสได้ทันที)
+// ตอนนี้การตรวจสอบรหัสผ่านทำที่ n8n ฝั่งเซิร์ฟเวอร์แทน ผ่าน N8N_VERIFY_PASSWORD_WEBHOOK ด้านล่าง
+// ไปแก้รหัสผ่านจริงได้ที่ node "Check Password" ใน n8n workflow "Dev Sync - Data API"
 
 // ใส่ URL ของ n8n Webhook สำหรับแจ้งเตือน Discord เมื่อมีการจองใหม่ (ดูวิธีตั้งค่าด้านล่างของแชท)
 const N8N_NEW_BOOKING_WEBHOOK = "https://n8n-external.exservice.io/webhook/new-booking";
@@ -715,6 +717,7 @@ const N8N_CANCEL_BOOKING_WEBHOOK = "https://n8n-external.exservice.io/webhook/ca
 const N8N_GET_DATA_WEBHOOK = "https://n8n-external.exservice.io/webhook/get-data"; // GET: คืน {bookings, closedDays, closedSlots}
 const N8N_TOGGLE_DAY_WEBHOOK = "https://n8n-external.exservice.io/webhook/toggle-day"; // POST: {person,date,closed,reason}
 const N8N_TOGGLE_SLOT_WEBHOOK = "https://n8n-external.exservice.io/webhook/toggle-slot"; // POST: {person,date,time,closed}
+const N8N_VERIFY_PASSWORD_WEBHOOK = "https://n8n-external.exservice.io/webhook/verify-password"; // POST: {password} -> {ok:true/false}
 
 // รายชื่อคนที่เปิดให้จอง แต่ละคนมีตารางเวลา (การจอง/ปิดรับจอง) แยกจากกันอิสระ
 // เพิ่ม/ลบคนได้ตรงนี้ — id ห้ามซ้ำ ห้ามมีช่องว่าง ใช้เป็น key เก็บข้อมูล
@@ -1189,15 +1192,48 @@ function renderCalendar(){
 }
 
 /* ======================= SETTINGS ======================= */
-function tryUnlock(){
+async function tryUnlock(){
   const val = document.getElementById('pwInput').value;
-  if(val === SETTINGS_PASSWORD){
-    document.getElementById('lockScreen').style.display='none';
-    document.getElementById('settingsPanel').style.display='block';
-    document.getElementById('pwErr').style.display='none';
-    renderSettingsCalendar();
-  }else{
-    document.getElementById('pwErr').style.display='block';
+  const btn = document.getElementById('unlockBtn');
+  const errEl = document.getElementById('pwErr');
+  errEl.style.display = 'none';
+
+  if(!val){
+    errEl.textContent = 'กรุณากรอกรหัสผ่าน';
+    errEl.style.display = 'block';
+    return;
+  }
+  if(!N8N_VERIFY_PASSWORD_WEBHOOK){
+    errEl.textContent = 'ยังไม่ได้ตั้งค่า N8N_VERIFY_PASSWORD_WEBHOOK';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  setBtnLoading(btn, true, 'กำลังตรวจสอบ...');
+  try{
+    const res = await fetch(N8N_VERIFY_PASSWORD_WEBHOOK, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ password: val })
+    });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    setBtnLoading(btn, false);
+
+    if(data.ok){
+      document.getElementById('pwInput').value = '';
+      document.getElementById('lockScreen').style.display='none';
+      document.getElementById('settingsPanel').style.display='block';
+      renderSettingsCalendar();
+    }else{
+      errEl.textContent = 'รหัสผ่านไม่ถูกต้อง';
+      errEl.style.display='block';
+    }
+  }catch(e){
+    console.error('[n8n] ตรวจสอบรหัสผ่านไม่สำเร็จ:', e);
+    setBtnLoading(btn, false);
+    errEl.textContent = 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่ (เช็คการเชื่อมต่อ n8n)';
+    errEl.style.display = 'block';
   }
 }
 function lockSettings(){
