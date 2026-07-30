@@ -98,7 +98,7 @@
     gap:22px;
     align-items:start;
   }
-  @media (max-width:880px){ .grid-2col{ grid-template-columns:1fr; } }
+  @media (max-width:880px){ .grid-2col{ grid-template-columns:1fr; } } /* superseded below but kept for safety */
 
   .card{
     background:var(--white);
@@ -244,6 +244,7 @@
     border-left:1px solid #222b38;
   }
   .month-daylabel:first-child{ border-left:none; }
+  .dow-short{ display:none; }
   .month-cell{
     min-height:98px;
     border-top:1px solid var(--line);
@@ -565,6 +566,67 @@
     background:#FAFBFC; border:1px dashed var(--line); border-radius:7px; padding:10px 12px; margin-top:16px;
   }
   .booked-by-tag{ font-size:11px; color:var(--text-dim); margin-top:2px;}
+
+  /* ======================= RESPONSIVE: TABLET ======================= */
+  @media (max-width: 880px){
+    .grid-2col{ grid-template-columns:1fr; }
+    main{ padding:18px 16px 48px; }
+  }
+
+  /* ======================= RESPONSIVE: MOBILE ======================= */
+  @media (max-width: 640px){
+    header{ padding:14px 16px; }
+    .brand h1{ font-size:15px; }
+    .brand .tag{ font-size:10px; }
+    .brand .glyph{ font-size:17px; }
+    nav{ width:100%; }
+    nav button{ flex:1; padding:9px 8px; font-size:11.5px; }
+
+    main{ padding:14px 12px 40px; }
+    .card{ padding:14px; border-radius:9px; }
+    .card h2{ font-size:12.5px; margin-bottom:12px; }
+
+    label{ font-size:12px; margin:11px 0 5px; }
+    input[type=text], input[type=date], select, textarea{ padding:9px 10px; font-size:13.5px; }
+
+    .slot-grid{ grid-template-columns:repeat(2,1fr); gap:5px; }
+    .slot-btn{ font-size:10.5px; padding:8px 3px; }
+    .submit-btn{ padding:11px; font-size:12px; }
+
+    /* ปฏิทิน: สลับไปใช้ชื่อวันแบบย่อ กันล้นบนจอแคบ */
+    .dow-full{ display:none; }
+    .dow-short{ display:inline; }
+    .month-daylabel{ font-size:9.5px; padding:6px 2px; }
+    .month-cell{ min-height:64px; padding:4px 4px 6px; gap:2px; }
+    .date-num{ font-size:10.5px; }
+    .today-badge{ width:17px; height:17px; font-size:11px; }
+    .chips{ max-height:70px; gap:2px; }
+    .day-chip{ font-size:9px; padding:2px 4px; }
+    .day-status-badges{ gap:2px; }
+    .badge-closed-day, .badge-partial{ font-size:8px; padding:1px 4px; }
+
+    .month-nav{ margin-bottom:10px; }
+    .month-title{ font-size:12.5px; gap:6px; }
+    .month-title .arrow{ width:24px; height:24px; font-size:14px; }
+    .today-btn{ padding:6px 10px; font-size:11px; }
+
+    .modal-card{ padding:18px; max-width:100%; }
+    .modal-card h3{ font-size:13.5px; }
+    .modal-actions{ flex-direction:column-reverse; }
+
+    .day-toggle-row{ flex-direction:column; gap:8px; }
+    .day-toggle-row > div{ width:100%; }
+
+    .lock-screen{ margin:40px auto; max-width:100%; padding:0 8px; }
+
+    .settings-topbar{ flex-wrap:wrap; gap:8px; }
+    #settingsPersonSelect{ max-width:100% !important; }
+  }
+
+  @media (max-width: 380px){
+    .slot-grid{ grid-template-columns:1fr; }
+    nav button{ font-size:10.5px; padding:8px 4px; }
+  }
 </style>
 </head>
 <body>
@@ -1101,6 +1163,7 @@ const THAI_MONTHS = ["มกราคม","กุมภาพันธ์","ม�
 const THAI_MONTHS_ABBR = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.",
                            "ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const WEEKDAY_FULL = ["วันจันทร์","วันอังคาร","วันพุธ","วันพฤหัสบดี","วันศุกร์","วันเสาร์","วันอาทิตย์"];
+const WEEKDAY_SHORT = ["จ","อ","พ","พฤ","ศ","ส","อา"];
 
 let calYear, calMonth; // calMonth is 0-indexed
 
@@ -1185,7 +1248,7 @@ function renderCalendar(){
       <div style="width:64px;"></div>
     </div>
     <div class="month-grid">
-      ${WEEKDAY_FULL.map(d=>`<div class="month-daylabel">${d}</div>`).join('')}
+      ${WEEKDAY_FULL.map((d,i)=>`<div class="month-daylabel"><span class="dow-full">${d}</span><span class="dow-short">${WEEKDAY_SHORT[i]}</span></div>`).join('')}
       ${cellsHtml}
     </div>
   `;
@@ -1304,7 +1367,7 @@ function renderSettingsCalendar(){
       <div style="width:64px;"></div>
     </div>
     <div class="month-grid">
-      ${WEEKDAY_FULL.map(d=>`<div class="month-daylabel">${d}</div>`).join('')}
+      ${WEEKDAY_FULL.map((d,i)=>`<div class="month-daylabel"><span class="dow-full">${d}</span><span class="dow-short">${WEEKDAY_SHORT[i]}</span></div>`).join('')}
       ${cellsHtml}
     </div>
   `;
